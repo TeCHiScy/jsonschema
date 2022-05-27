@@ -1,6 +1,7 @@
 package jsonschema
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -8,12 +9,14 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"text/template"
 	"unicode/utf8"
 )
 
 // A Schema represents compiled version of json-schema.
 type Schema struct {
 	Location string // absolute location
+	Messages map[string]string
 
 	dynamicAnchors []*Schema
 
@@ -164,6 +167,29 @@ func (s *Schema) validateValue(v interface{}, vloc string) (err error) {
 	return nil
 }
 
+// formatError formats validation errors into user-readable message.
+//
+// Given a keywordPath,
+// if a corresponding message template is given in schema,
+// the error will be formatted using text/template, otherwise,
+// it will be formatted using fmt.Sprintf and the default template.
+func (s *Schema) formatError(keywordPath string, format string, a ...interface{}) string {
+	keywords := []string{keywordPath, "default"}
+	for _, keyword := range keywords {
+		if format, ok := s.Messages[keyword]; ok {
+			buf := &bytes.Buffer{}
+			t, err := template.New("template").Parse(format)
+			if err != nil {
+				continue
+			}
+			if err := t.Execute(buf, a); err == nil {
+				return buf.String()
+			}
+		}
+	}
+	return fmt.Sprintf(format, a...)
+}
+
 // validate validates given value v with this schema.
 func (s *Schema) validate(scope []schemaRef, vscope int, spath string, v interface{}, vloc string) (result validationResult, err error) {
 	validationError := func(keywordPath string, format string, a ...interface{}) *ValidationError {
@@ -171,7 +197,7 @@ func (s *Schema) validate(scope []schemaRef, vscope int, spath string, v interfa
 			KeywordLocation:         keywordLocation(scope, keywordPath),
 			AbsoluteKeywordLocation: joinPtr(s.Location, keywordPath),
 			InstanceLocation:        vloc,
-			Message:                 fmt.Sprintf(format, a...),
+			Message:                 s.formatError(keywordPath, format, a...),
 		}
 	}
 
