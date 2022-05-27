@@ -175,6 +175,7 @@ func (s *Schema) validateValue(v interface{}, vloc string) (err error) {
 // it will be formatted using fmt.Sprintf and the default template.
 func (s *Schema) formatError(keywordPath string, format string, a ...interface{}) string {
 	keywords := []string{keywordPath, "default"}
+	fmt.Print(s.Messages)
 	for _, keyword := range keywords {
 		if format, ok := s.Messages[keyword]; ok {
 			buf := &bytes.Buffer{}
