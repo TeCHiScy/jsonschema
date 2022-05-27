@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"text/template"
 )
 
 // A Compiler represents a json-schema compiler.
@@ -289,12 +290,6 @@ func (c *Compiler) compileMap(r *resource, stack []schemaRef, sref schemaRef, re
 		}
 	}
 
-	if t, ok := m["message"]; ok {
-		if t, ok := t.(map[string]string); ok {
-			s.Message = t
-		}
-	}
-
 	if t, ok := m["type"]; ok {
 		switch t := t.(type) {
 		case string:
@@ -376,6 +371,18 @@ func (c *Compiler) compileMap(r *resource, stack []schemaRef, sref schemaRef, re
 		return -1
 	}
 	s.MinProperties, s.MaxProperties = loadInt("minProperties"), loadInt("maxProperties")
+
+	if messages, ok := m["messages"]; ok {
+		messages := messages.(map[string]interface{})
+		s.Messages = make(map[string]*template.Template, len(messages))
+		for keyword, v := range messages {
+			t, err := template.New(keyword).Parse(v.(string))
+			if err != nil {
+				return err
+			}
+			s.Messages[keyword] = t
+		}
+	}
 
 	if req, ok := m["required"]; ok {
 		s.Required = toStrings(req.([]interface{}))

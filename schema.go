@@ -16,7 +16,7 @@ import (
 // A Schema represents compiled version of json-schema.
 type Schema struct {
 	Location string // absolute location
-	Message  map[string]string
+	Messages map[string]*template.Template
 
 	dynamicAnchors []*Schema
 
@@ -115,7 +115,6 @@ func newSchema(url, floc string, doc interface{}) *Schema {
 		MaxContains:   -1,
 		MinLength:     -1,
 		MaxLength:     -1,
-		Message:       map[string]string{},
 	}
 
 	if doc, ok := doc.(map[string]interface{}); ok {
@@ -176,14 +175,9 @@ func (s *Schema) validateValue(v interface{}, vloc string) (err error) {
 // it will be formatted using fmt.Sprintf and the default template.
 func (s *Schema) formatError(keywordPath string, format string, a ...interface{}) string {
 	keywords := []string{keywordPath, "default"}
-	fmt.Print(s.Message)
 	for _, keyword := range keywords {
-		if format, ok := s.Message[keyword]; ok {
+		if t, ok := s.Messages[keyword]; ok {
 			buf := &bytes.Buffer{}
-			t, err := template.New("template").Parse(format)
-			if err != nil {
-				continue
-			}
 			if err := t.Execute(buf, a); err == nil {
 				return buf.String()
 			}
