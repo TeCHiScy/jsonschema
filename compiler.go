@@ -289,6 +289,12 @@ func (c *Compiler) compileMap(r *resource, stack []schemaRef, sref schemaRef, re
 		}
 	}
 
+	if t, ok := m["message"]; ok {
+		if t, ok := t.(map[string]string); ok {
+			s.Message = t
+		}
+	}
+
 	if t, ok := m["type"]; ok {
 		switch t := t.(type) {
 		case string:
